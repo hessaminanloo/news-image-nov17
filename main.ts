@@ -14,11 +14,24 @@
 // Node 22, standard library only, no network, no clock, no reads
 // outside this repository.
 
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
 mkdirSync(outDir, { recursive: true });
-copyFileSync(join(here, "entry.png"), join(outDir, "entry.png"));
+const src = join(here, "entry.png");
+const dst = join(outDir, "entry.png");
+copyFileSync(src, dst);
+
+// Integrity check: a truncated or partial copy would silently grade as a
+// corrupt image, so confirm the copy is byte-for-byte the same length as
+// the source and fail loudly if it is not.
+const srcSize = statSync(src).size;
+const dstSize = statSync(dst).size;
+if (dstSize !== srcSize) {
+  throw new Error(
+    `copy verification failed: ${dst} is ${dstSize} bytes, expected ${srcSize} bytes (source ${src})`
+  );
+}
